@@ -141,14 +141,6 @@ export default function DriverList() {
         )}
       </div>
 
-      <div className="mt-8">
-        <Link href="/add-driver">
-          <button className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors">
-            Add New Driver
-          </button>
-        </Link>
-      </div>
-
       <div className="absolute bottom-8 left-8">
         <Link href="/">
           <button className="text-white">
