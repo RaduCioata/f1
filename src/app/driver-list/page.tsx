@@ -8,11 +8,14 @@ import { Driver } from "../context/DriverContext";
 type SortField = 'name' | 'team' | 'firstSeason' | 'races' | 'wins';
 type SortDirection = 'asc' | 'desc';
 
+const ITEMS_PER_PAGE = 5;
+
 export default function DriverList() {
   const { drivers } = useDrivers();
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showStats, setShowStats] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -62,6 +65,12 @@ export default function DriverList() {
     // Reverse the result if sorting in descending order
     return sortDirection === 'asc' ? result : -result;
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedDrivers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedDrivers = sortedDrivers.slice(startIndex, endIndex);
 
   // Helper function to render sort indicator
   const renderSortIndicator = (field: SortField) => {
@@ -241,12 +250,19 @@ export default function DriverList() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
       {drivers.length > 0 && (
         <div className="w-full max-w-2xl mb-6">
-          <button 
-            onClick={() => setShowStats(!showStats)}
-            className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors mb-4"
-          >
-            {showStats ? 'Hide Statistics' : 'Show Statistics'}
-          </button>
+          <div className="flex justify-between items-center mb-4">
+            <button 
+              onClick={() => setShowStats(!showStats)}
+              className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              {showStats ? 'Hide Statistics' : 'Show Statistics'}
+            </button>
+            <Link href="/statistics">
+              <button className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors">
+                View Detailed Statistics
+              </button>
+            </Link>
+          </div>
           
           {showStats && stats && (
             <div className="bg-white rounded-md p-4 mb-4 shadow-md">
@@ -306,80 +322,128 @@ export default function DriverList() {
       
       <div className="w-full max-w-2xl bg-white rounded-md overflow-hidden">
         {drivers.length > 0 ? (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="p-3 text-left">#</th>
-                <th 
-                  className="p-3 text-left cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('name')}
-                >
-                  Driver {renderSortIndicator('name')}
-                </th>
-                <th 
-                  className="p-3 text-left cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('team')}
-                >
-                  Team {renderSortIndicator('team')}
-                </th>
-                <th 
-                  className="p-3 text-left cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('firstSeason')}
-                >
-                  First Season {renderSortIndicator('firstSeason')}
-                </th>
-                <th 
-                  className="p-3 text-left cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('races')}
-                >
-                  Races {renderSortIndicator('races')}
-                </th>
-                <th 
-                  className="p-3 text-left cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('wins')}
-                >
-                  Wins {renderSortIndicator('wins')}
-                </th>
-                <th 
-                  className="p-3 text-left"
-                >
-                  Win %
-                </th>
-                <th className="p-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedDrivers.map((driver, index) => (
-                <tr key={driver.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{index + 1}</td>
-                  <td className="p-3">{driver.name}</td>
-                  <td className="p-3">{driver.team}</td>
-                  <td className={`p-3 ${driver.id === stats?.veteranDriver?.id ? 'bg-green-100 font-bold' : ''} ${driver.id === stats?.newestDriver?.id ? 'bg-blue-100 font-bold' : ''}`} title={driver.id === stats?.veteranDriver?.id ? 'Veteran driver' : driver.id === stats?.newestDriver?.id ? 'Newest driver' : ''}>
-                    {driver.firstSeason}
-                  </td>
-                  <td className={`p-3 ${getCellHighlight(driver, 'races')}`} title={getTooltip(driver, 'races')}>
-                    {driver.races}
-                  </td>
-                  <td className={`p-3 ${getCellHighlight(driver, 'wins')}`} title={getTooltip(driver, 'wins')}>
-                    {driver.wins}
-                  </td>
-                  <td className={`p-3 ${getCellHighlight(driver, 'winPercentage')}`} title={getTooltip(driver, 'winPercentage')}>
-                    {driver.races > 0 
-                      ? ((driver.wins / driver.races) * 100).toFixed(2) + '%'
-                      : '0.00%'
-                    }
-                  </td>
-                  <td className="p-3 text-center">
-                    <Link href={`/edit-driver/${driver.id}`}>
-                      <button className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 transition-colors">
-                        Edit
-                      </button>
-                    </Link>
-                  </td>
+          <>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="p-3 text-left">#</th>
+                  <th 
+                    className="p-3 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('name')}
+                  >
+                    Driver {renderSortIndicator('name')}
+                  </th>
+                  <th 
+                    className="p-3 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('team')}
+                  >
+                    Team {renderSortIndicator('team')}
+                  </th>
+                  <th 
+                    className="p-3 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('firstSeason')}
+                  >
+                    First Season {renderSortIndicator('firstSeason')}
+                  </th>
+                  <th 
+                    className="p-3 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('races')}
+                  >
+                    Races {renderSortIndicator('races')}
+                  </th>
+                  <th 
+                    className="p-3 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('wins')}
+                  >
+                    Wins {renderSortIndicator('wins')}
+                  </th>
+                  <th 
+                    className="p-3 text-left"
+                  >
+                    Win %
+                  </th>
+                  <th className="p-3 text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedDrivers.map((driver, index) => (
+                  <tr key={driver.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{startIndex + index + 1}</td>
+                    <td className="p-3">{driver.name}</td>
+                    <td className="p-3">{driver.team}</td>
+                    <td className={`p-3 ${driver.id === stats?.veteranDriver?.id ? 'bg-green-100 font-bold' : ''} ${driver.id === stats?.newestDriver?.id ? 'bg-blue-100 font-bold' : ''}`} title={driver.id === stats?.veteranDriver?.id ? 'Veteran driver' : driver.id === stats?.newestDriver?.id ? 'Newest driver' : ''}>
+                      {driver.firstSeason}
+                    </td>
+                    <td className={`p-3 ${getCellHighlight(driver, 'races')}`} title={getTooltip(driver, 'races')}>
+                      {driver.races}
+                    </td>
+                    <td className={`p-3 ${getCellHighlight(driver, 'wins')}`} title={getTooltip(driver, 'wins')}>
+                      {driver.wins}
+                    </td>
+                    <td className={`p-3 ${getCellHighlight(driver, 'winPercentage')}`} title={getTooltip(driver, 'winPercentage')}>
+                      {driver.races > 0 
+                        ? ((driver.wins / driver.races) * 100).toFixed(2) + '%'
+                        : '0.00%'
+                      }
+                    </td>
+                    <td className="p-3 text-center">
+                      <Link href={`/edit-driver/${driver.id}`}>
+                        <button className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 transition-colors">
+                          Edit
+                        </button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center p-4 bg-gray-50">
+              <div className="text-sm text-gray-700">
+                Showing {startIndex + 1} to {Math.min(endIndex, sortedDrivers.length)} of {sortedDrivers.length} drivers
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === 1
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === totalPages
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  Next
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded ${
+                        currentPage === page
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 hover:bg-gray-300'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="p-6 text-center">
             <p>No drivers added yet. Add your first driver!</p>

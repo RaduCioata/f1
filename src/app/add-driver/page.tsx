@@ -113,6 +113,7 @@ export default function AddDriver() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate form before submitting
     if (!validateForm()) {
       return;
     }
@@ -132,7 +133,7 @@ export default function AddDriver() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="w-full max-w-md" noValidate>
         <div className="mb-6">
           <label htmlFor="name" className="block text-white mb-2">
             Name

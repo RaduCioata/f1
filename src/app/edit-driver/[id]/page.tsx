@@ -60,7 +60,7 @@ export default function EditDriver() {
     
     // Name validation
     if (!formData.name.trim()) {
-      newErrors.name = "Driver name is required";
+      newErrors.name = "Name is required";
       isValid = false;
     } else if (formData.name.trim().length < 2) {
       newErrors.name = "Name must be at least 2 characters";
@@ -72,7 +72,7 @@ export default function EditDriver() {
     
     // Team validation
     if (!formData.team.trim()) {
-      newErrors.team = "Team name is required";
+      newErrors.team = "Team is required";
       isValid = false;
     } else if (!/^[A-Za-z\s\-']+$/.test(formData.team.trim())) {
       newErrors.team = "Team can only contain letters, spaces, hyphens, and apostrophes";
@@ -92,14 +92,14 @@ export default function EditDriver() {
       newErrors.firstSeason = "First season cannot be before 1950";
       isValid = false;
     } else if (firstSeasonValue > currentYear) {
-      newErrors.firstSeason = `First season cannot be after ${currentYear}`;
+      newErrors.firstSeason = "First season cannot be in the future";
       isValid = false;
     }
     
     // Races validation
     const racesValue = parseInt(formData.races);
     if (!formData.races) {
-      newErrors.races = "Number of races is required";
+      newErrors.races = "Races is required";
       isValid = false;
     } else if (isNaN(racesValue)) {
       newErrors.races = "Number of races must be a number";
@@ -112,7 +112,7 @@ export default function EditDriver() {
     // Wins validation
     const winsValue = parseInt(formData.wins);
     if (!formData.wins) {
-      newErrors.wins = "Number of wins is required";
+      newErrors.wins = "Wins is required";
       isValid = false;
     } else if (isNaN(winsValue)) {
       newErrors.wins = "Number of wins must be a number";
@@ -121,7 +121,7 @@ export default function EditDriver() {
       newErrors.wins = "Number of wins cannot be negative";
       isValid = false;
     } else if (winsValue > racesValue) {
-      newErrors.wins = "Number of wins cannot exceed number of races";
+      newErrors.wins = "Wins cannot exceed races";
       isValid = false;
     }
     
@@ -132,6 +132,7 @@ export default function EditDriver() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate form before submitting
     if (!validateForm()) {
       return;
     }
@@ -156,7 +157,7 @@ export default function EditDriver() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="w-full max-w-md" noValidate>
         <div className="mb-6">
           <label htmlFor="name" className="block text-white mb-2">
             Name
@@ -264,6 +265,7 @@ export default function EditDriver() {
             type="button" 
             onClick={handleDelete}
             className="text-white"
+            aria-label="Delete Driver"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

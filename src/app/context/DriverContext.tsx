@@ -26,7 +26,7 @@ export function DriverProvider({ children }: { children: ReactNode }) {
 
   // Load drivers from localStorage on initial render
   useEffect(() => {
-    const storedDrivers = localStorage.getItem("f1drivers");
+    const storedDrivers = localStorage.getItem("drivers");
     if (storedDrivers) {
       setDrivers(JSON.parse(storedDrivers));
     }
@@ -34,7 +34,7 @@ export function DriverProvider({ children }: { children: ReactNode }) {
 
   // Save drivers to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("f1drivers", JSON.stringify(drivers));
+    localStorage.setItem("drivers", JSON.stringify(drivers));
   }, [drivers]);
 
   const addDriver = (driver: Omit<Driver, "id">) => {
