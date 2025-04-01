@@ -265,14 +265,15 @@ export default function Statistics() {
   };
 
   return (
-    <main className="min-h-screen bg-red-600 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Formula One Statistics</h1>
-          <Link href="/driver-list">
-            <button className="bg-white text-red-600 font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors">
-              Back to Driver List
-            </button>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
+      <div className="w-full max-w-5xl rounded-xl bg-white p-8 shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Driver Statistics</h1>
+          <Link
+            href="/driver-list"
+            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
+            Back to Driver List
           </Link>
         </div>
 
