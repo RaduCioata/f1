@@ -34,8 +34,8 @@ A modern, interactive dashboard for visualizing Formula One driver statistics. B
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/formulaone.git
-cd formulaone
+git clone https://github.com/RaduCioata/f1.git
+cd f1
 ```
 
 2. Install dependencies:
@@ -211,4 +211,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Formula One for the inspiration
 - Chart.js for the excellent charting library
 - Next.js team for the amazing framework
-- All contributors and maintainers of the open-source libraries used in this project
