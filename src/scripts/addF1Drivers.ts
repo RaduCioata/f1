@@ -30,149 +30,150 @@ async function addDriver(driver: {
   }
 }
 
-// Current F1 drivers data as of 2024 season
+// Current F1 drivers data as of 2025 season
 const f1Drivers = [
   {
     name: "Max Verstappen",
     team: "Red Bull Racing",
     firstSeason: 2015,
-    races: 188,
-    wins: 57
+    races: 210,
+    wins: 65
   },
   {
-    name: "Sergio Perez",
+    name: "Yuki Tsunoda",
     team: "Red Bull Racing",
-    firstSeason: 2011,
-    races: 258,
-    wins: 6
+    firstSeason: 2021,
+    races: 97,
+    wins: 0
   },
   {
     name: "Lewis Hamilton",
-    team: "Mercedes",
+    team: "Ferrari",
     firstSeason: 2007,
-    races: 332,
+    races: 350,
     wins: 103
-  },
-  {
-    name: "George Russell",
-    team: "Mercedes",
-    firstSeason: 2019,
-    races: 101,
-    wins: 2
   },
   {
     name: "Charles Leclerc",
     team: "Ferrari",
     firstSeason: 2018,
-    races: 124,
+    races: 146,
+    wins: 7
+  },
+  {
+    name: "George Russell",
+    team: "Mercedes",
+    firstSeason: 2019,
+    races: 123,
     wins: 5
   },
   {
-    name: "Carlos Sainz",
-    team: "Ferrari",
-    firstSeason: 2015,
-    races: 188,
-    wins: 3
+    name: "Andrea Kimi Antonelli",
+    team: "Mercedes",
+    firstSeason: 2025,
+    races: 2,
+    wins: 0
   },
   {
     name: "Lando Norris",
     team: "McLaren",
     firstSeason: 2019,
-    races: 101,
-    wins: 2
+    races: 123,
+    wins: 4
   },
   {
     name: "Oscar Piastri",
     team: "McLaren",
     firstSeason: 2023,
-    races: 26,
-    wins: 1
+    races: 48,
+    wins: 2
   },
   {
     name: "Fernando Alonso",
     team: "Aston Martin",
     firstSeason: 2001,
-    races: 380,
+    races: 402,
     wins: 32
   },
   {
     name: "Lance Stroll",
     team: "Aston Martin",
     firstSeason: 2017,
-    races: 148,
+    races: 170,
     wins: 0
-  },
-  {
-    name: "Esteban Ocon",
-    team: "Alpine",
-    firstSeason: 2016,
-    races: 142,
-    wins: 1
   },
   {
     name: "Pierre Gasly",
     team: "Alpine",
     firstSeason: 2017,
-    races: 145,
+    races: 167,
     wins: 1
   },
   {
-    name: "Daniel Ricciardo",
-    team: "RB",
-    firstSeason: 2011,
-    races: 243,
-    wins: 8
+    name: "Jack Doohan",
+    team: "Alpine",
+    firstSeason: 2025,
+    races: 2,
+    wins: 0
   },
   {
-    name: "Yuki Tsunoda",
-    team: "RB",
-    firstSeason: 2021,
-    races: 75,
-    wins: 0
+    name: "Carlos Sainz",
+    team: "Williams",
+    firstSeason: 2015,
+    races: 210,
+    wins: 3
   },
   {
     name: "Alexander Albon",
     team: "Williams",
     firstSeason: 2019,
-    races: 87,
-    wins: 0
-  },
-  {
-    name: "Logan Sargeant",
-    team: "Williams",
-    firstSeason: 2023,
-    races: 24,
-    wins: 0
-  },
-  {
-    name: "Valtteri Bottas",
-    team: "Kick Sauber",
-    firstSeason: 2013,
-    races: 220,
-    wins: 10
-  },
-  {
-    name: "Zhou Guanyu",
-    team: "Kick Sauber",
-    firstSeason: 2022,
-    races: 50,
-    wins: 0
-  },
-  {
-    name: "Kevin Magnussen",
-    team: "Haas F1 Team",
-    firstSeason: 2014,
-    races: 167,
+    races: 109,
     wins: 0
   },
   {
     name: "Nico Hulkenberg",
-    team: "Haas F1 Team",
+    team: "Sauber",
     firstSeason: 2010,
-    races: 207,
+    races: 229,
+    wins: 0
+  },
+  {
+    name: "Gabriel Bortoleto",
+    team: "Sauber",
+    firstSeason: 2025,
+    races: 2,
+    wins: 0
+  },
+  {
+    name: "Esteban Ocon",
+    team: "Haas F1 Team",
+    firstSeason: 2016,
+    races: 164,
+    wins: 1
+  },
+  {
+    name: "Oliver Bearman",
+    team: "Haas F1 Team",
+    firstSeason: 2025,
+    races: 2,
+    wins: 0
+  },
+  {
+    name: "Liam Lawson",
+    team: "Racing Bulls",
+    firstSeason: 2023,
+    races: 22,
+    wins: 0
+  },
+  {
+    name: "Isack Hadjar",
+    team: "Racing Bulls",
+    firstSeason: 2025,
+    races: 2,
     wins: 0
   }
 ];
+
 
 // Function to add all drivers
 async function addAllDrivers() {
