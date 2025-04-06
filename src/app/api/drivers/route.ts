@@ -25,52 +25,67 @@ const validateWinsRaces = (data: any) => {
 };
 
 // GET handler
-export async function GET(request: NextRequest) {
-  // Get query parameters - Support both URL and NextURL
-  const url = request.nextUrl || new URL(request.url);
-  const { searchParams } = url;
-  
-  // Get filter parameters
-  const teamFilter = searchParams.get('team');
-  const nameFilter = searchParams.get('name');
-  const minWins = searchParams.get('minWins');
-  
-  // Get sort parameters
-  const sortBy = searchParams.get('sortBy');
-  const sortOrder = searchParams.get('sortOrder') === 'desc' ? -1 : 1;
-  
-  // Apply filters
-  let filteredDrivers = [...drivers];
-  
-  if (teamFilter) {
-    filteredDrivers = filteredDrivers.filter(driver => 
-      driver.team.toLowerCase().includes(teamFilter.toLowerCase())
-    );
-  }
-  
-  if (nameFilter) {
-    filteredDrivers = filteredDrivers.filter(driver => 
-      driver.name.toLowerCase().includes(nameFilter.toLowerCase())
-    );
-  }
-  
-  if (minWins) {
-    const minimumWins = parseInt(minWins);
-    if (!isNaN(minimumWins)) {
-      filteredDrivers = filteredDrivers.filter(driver => driver.wins >= minimumWins);
+export async function GET(req: NextRequest) {
+  try {
+    // Parse query parameters
+    const url = new URL(req.url);
+    const searchParams = url.searchParams;
+    
+    // Extract filter parameters
+    const team = searchParams.get('team');
+    const name = searchParams.get('name');
+    const minWinsParam = searchParams.get('minWins');
+    const minWins = minWinsParam ? parseInt(minWinsParam) : undefined;
+    
+    // Extract pagination parameters
+    const skipParam = searchParams.get('skip');
+    const limitParam = searchParams.get('limit');
+    const skip = skipParam ? parseInt(skipParam) : 0;
+    const limit = limitParam ? parseInt(limitParam) : drivers.length;
+    
+    // Extract sorting parameters
+    const sortBy = searchParams.get('sortBy') as keyof Driver | null;
+    const sortOrder = searchParams.get('sortOrder') as 'asc' | 'desc' | null;
+    
+    // Apply filters
+    let filteredDrivers = [...drivers];
+    
+    if (team) {
+      filteredDrivers = filteredDrivers.filter(d => 
+        d.team.toLowerCase().includes(team.toLowerCase())
+      );
     }
+    
+    if (name) {
+      filteredDrivers = filteredDrivers.filter(d => 
+        d.name.toLowerCase().includes(name.toLowerCase())
+      );
+    }
+    
+    if (minWins !== undefined) {
+      filteredDrivers = filteredDrivers.filter(d => d.wins >= minWins);
+    }
+    
+    // Apply sorting
+    if (sortBy && sortOrder) {
+      filteredDrivers.sort((a, b) => {
+        if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
+        if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    // Apply pagination
+    const paginatedDrivers = filteredDrivers.slice(skip, skip + limit);
+    
+    return NextResponse.json(paginatedDrivers);
+  } catch (error) {
+    console.error('Error in drivers API:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch drivers' },
+      { status: 500 }
+    );
   }
-  
- 
-  if (sortBy && ['name', 'team', 'races', 'wins', 'firstSeason'].includes(sortBy)) {
-    filteredDrivers.sort((a, b) => {
-      if (a[sortBy as keyof Driver] < b[sortBy as keyof Driver]) return -1 * sortOrder;
-      if (a[sortBy as keyof Driver] > b[sortBy as keyof Driver]) return 1 * sortOrder;
-      return 0;
-    });
-  }
-  
-  return NextResponse.json(filteredDrivers);
 }
 
 // POST handler

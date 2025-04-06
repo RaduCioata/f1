@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { DriverProvider } from "./context/DriverContext";
+import NetworkStatusWrapper from "./components/NetworkStatusWrapper";
 
 export const metadata: Metadata = {
   title: "Formula One Driver Manager",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
         <DriverProvider>
-          {children}
+          <NetworkStatusWrapper>
+            {children}
+          </NetworkStatusWrapper>
         </DriverProvider>
       </body>
     </html>

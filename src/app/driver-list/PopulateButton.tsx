@@ -53,9 +53,9 @@ export default function PopulateButton() {
         // Wait a moment to ensure backend processing is complete
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Force a window refresh to ensure everything is updated
+        // Instead of reloading the page, fetch drivers with the context
         if (data.success) {
-          window.location.reload();
+          await fetchDrivers();
         }
       }
     } catch (error) {

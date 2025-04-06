@@ -23,41 +23,47 @@ export async function fetchDrivers(
     team?: string;
     name?: string;
     minWins?: number;
+    skip?: number;
+    limit?: number;
   },
   sort?: {
-    sortBy?: string;
+    sortBy?: keyof Driver;
     sortOrder?: 'asc' | 'desc';
   }
 ): Promise<Driver[]> {
   try {
-    // Create URL with query parameters
-    const params = new URLSearchParams();
+    // Build query parameters
+    const queryParams = new URLSearchParams();
     
-    // Add filter parameters if provided
+    // Add filtering parameters if provided
     if (filters) {
-      if (filters.team) params.append('team', filters.team);
-      if (filters.name) params.append('name', filters.name);
-      if (filters.minWins !== undefined) params.append('minWins', filters.minWins.toString());
+      if (filters.team) queryParams.append('team', filters.team);
+      if (filters.name) queryParams.append('name', filters.name);
+      if (filters.minWins !== undefined) queryParams.append('minWins', filters.minWins.toString());
+      if (filters.skip !== undefined) queryParams.append('skip', filters.skip.toString());
+      if (filters.limit !== undefined) queryParams.append('limit', filters.limit.toString());
     }
     
-    // Add sort parameters if provided
+    // Add sorting parameters if provided
     if (sort) {
-      if (sort.sortBy) params.append('sortBy', sort.sortBy);
-      if (sort.sortOrder) params.append('sortOrder', sort.sortOrder);
+      if (sort.sortBy) queryParams.append('sortBy', sort.sortBy.toString());
+      if (sort.sortOrder) queryParams.append('sortOrder', sort.sortOrder);
     }
     
-    // Add a cache-busting parameter
-    addCacheBuster(params);
+    // Build the URL with query parameters
+    const url = `/api/drivers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
-    // Make the API request
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_BASE_URL}${queryString}`, {
-      headers: CACHE_HEADERS,
-      cache: 'no-store'
+    // Make the request
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching drivers: ${response.status}`);
+      throw new Error(`Failed to fetch drivers: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
