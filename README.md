@@ -1,6 +1,6 @@
 # Formula One Statistics Dashboard
 
-A modern, interactive dashboard for visualizing Formula One driver statistics. Built with Next.js, TypeScript, and Chart.js, this application provides a comprehensive view of F1 driver performance data with interactive visualizations.
+A modern, interactive dashboard for visualizing Formula One driver statistics. Built with Next.js, TypeScript, and Chart.js, this application provides a comprehensive view of F1 driver performance data with interactive visualizations and real-time updates via Socket.IO.
 
 ## Features
 
@@ -11,6 +11,7 @@ A modern, interactive dashboard for visualizing Formula One driver statistics. B
   - Experience Trend: Analyze the relationship between driver experience and performance
   - Driver Comparison: Radar chart comparing selected drivers across multiple metrics
 - **Real-time Updates**: All charts update instantly when selecting or deselecting drivers
+- **Real-time Data Streaming**: Live F1 statistics updated in real-time via WebSockets
 - **Responsive Design**: Fully responsive layout that works on desktop and mobile devices
 - **Modern UI**: Clean, modern interface with a Formula One-inspired color scheme
 
@@ -21,6 +22,7 @@ A modern, interactive dashboard for visualizing Formula One driver statistics. B
 - **Styling**: Tailwind CSS
 - **Data Visualization**: Chart.js with React-ChartJS-2
 - **State Management**: React Context API
+- **Real-time Updates**: Socket.IO
 - **Package Manager**: pnpm
 
 ## Getting Started
@@ -43,12 +45,20 @@ cd f1
 pnpm install
 ```
 
-3. Run the development server:
+3. Run the application with real-time updates:
 ```bash
-pnpm dev
+pnpm dev:socket
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Running Without Real-time Updates
+
+If you want to run the application without the real-time Socket.IO features:
+
+```bash
+pnpm dev
+```
 
 ## Project Structure
 
@@ -59,9 +69,11 @@ formulaone/
 │   │   ├── add-driver/     # Add new driver form
 │   │   ├── api/            # Backend REST API
 │   │   │   └── drivers/    # Drivers API endpoints
+│   │   ├── socket/         # Socket.IO API endpoints
 │   │   ├── driver-list/    # Main driver list page
 │   │   ├── edit-driver/    # Edit driver form
 │   │   ├── statistics/     # Statistics dashboard
+│   │   ├── debug/          # WebSocket debugging page
 │   │   └── context/        # React Context for state management
 │   ├── components/         # Reusable components
 │   └── types/             # TypeScript type definitions
@@ -84,6 +96,12 @@ formulaone/
   - Total Wins
   - Total Races
   - Win Rate
+
+### Real-time Features
+- **Live Driver Updates**: Real-time updates of driver positions, lap times, and other race statistics
+- **Real-time Charts**: Dynamic charts that update automatically with incoming data
+- **WebSocket Debug Page**: Dedicated page for monitoring WebSocket connections and testing functionality
+- **Socket.IO Integration**: Custom server implementation with Socket.IO for reliable real-time communication
 
 ### Interactive Features
 - Select multiple drivers to compare their statistics

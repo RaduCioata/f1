@@ -16,10 +16,28 @@ export default function Home() {
             <p className="text-gray-600">View and manage the list of Formula One drivers.</p>
           </div>
         </Link>
+        <Link href="/dashboard">
+          <div className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <h2 className="text-2xl font-bold mb-4">Live Dashboard</h2>
+            <p className="text-gray-600">View real-time Formula One statistics and updates.</p>
+          </div>
+        </Link>
+        <Link href="/file-management">
+          <div className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <h2 className="text-2xl font-bold mb-4">File Management</h2>
+            <p className="text-gray-600">Upload and manage large files including videos and images.</p>
+          </div>
+        </Link>
         <Link href="/statistics">
           <div className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
             <h2 className="text-2xl font-bold mb-4">View Statistics</h2>
             <p className="text-gray-600">Explore detailed statistics and charts about Formula One drivers.</p>
+          </div>
+        </Link>
+        <Link href="/debug">
+          <div className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-2 border-dashed border-blue-500">
+            <h2 className="text-2xl font-bold mb-4">Debug Tools</h2>
+            <p className="text-gray-600">Debug WebSocket connections and real-time data flow.</p>
           </div>
         </Link>
       </div>

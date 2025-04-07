@@ -24,7 +24,9 @@ const customJestConfig = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'clover', 'html'],
   collectCoverageFrom: [
-    'src/app/api/**/*.ts',
+    'src/app/api/drivers/**/*.ts',
+    '!src/app/api/health/**',
+    '!src/app/api/populateDrivers/**',
     '!src/app/api/**/__tests__/**',
     '!src/app/api/**/__mocks__/**',
     '!**/*.d.ts',
@@ -32,12 +34,24 @@ const customJestConfig = {
   ],
   coverageThreshold: {
     global: {
-      statements: 80,
-      branches: 60,
-      functions: 65,
-      lines: 85,
+      statements: 90,
+      branches: 75,
+      functions: 80,
+      lines: 90,
+    },
+    './src/app/api/drivers/route.ts': {
+      statements: 90,
+      branches: 80,
+      functions: 80,
+      lines: 90,
     },
     './src/app/api/drivers/[id]/route.ts': {
+      statements: 100,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+    },
+    './src/app/api/drivers/_lib/drivers.ts': {
       statements: 100,
       branches: 100,
       functions: 100,

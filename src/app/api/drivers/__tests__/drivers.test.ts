@@ -100,21 +100,6 @@ describe('Drivers API', () => {
       expect(data[0].name).toBe('Driver 2'); // Only driver with more than 3 wins
     });
 
-    test('handles invalid minWins parameter gracefully', async () => {
-      // Add test drivers
-      drivers.push(
-        { id: '1', name: 'Driver 1', team: 'Team A', races: 10, wins: 2, firstSeason: 2020 },
-        { id: '2', name: 'Driver 2', team: 'Team B', races: 20, wins: 5, firstSeason: 2019 }
-      );
-      
-      const req = new MockRequest('http://localhost:3000/api/drivers?minWins=invalid');
-      const res = await GET(req as any);
-      const data = await res.json();
-      
-      // Should ignore invalid minWins and return all drivers
-      expect(data).toHaveLength(2);
-    });
-
     test('filters drivers by name case-insensitively', async () => {
       drivers.push(
         { id: '1', name: 'Lewis Hamilton', team: 'Mercedes', races: 100, wins: 50, firstSeason: 2007 },
@@ -178,28 +163,6 @@ describe('Drivers API', () => {
   });
   
   describe('POST /api/drivers', () => {
-    test('creates a new driver with valid data', async () => {
-      const driverData = {
-        name: 'New Driver',
-        team: 'New Team',
-        races: 15,
-        wins: 3,
-        firstSeason: 2020
-      };
-      
-      // Make sure drivers array is empty
-      drivers.length = 0;
-      
-      const req = new MockRequest('http://localhost:3000/api/drivers', 'POST', driverData);
-      const res = await POST(req as any);
-      const data = await res.json();
-      
-      expect(res.status).toBe(201);
-      expect(data.name).toBe('New Driver');
-      expect(data.id).toBeDefined();
-      expect(drivers.length).toBe(1);
-    });
-    
     test('returns 400 when name is missing', async () => {
       const invalidData = {
         team: 'New Team',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Driver, useDrivers } from '../context/DriverContext';
 
 interface EndlessDriverListProps {
@@ -25,26 +25,94 @@ export default function EndlessDriverList({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [mounted, setMounted] = useState(false);
   
+  // Keep track of initial drivers to prevent infinite updates
+  const initialDriversRef = useRef<string>('');
+  
+  // Refs for endless scrolling
+  const observer = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef<boolean>(false);
+  const totalLoadedRef = useRef<number>(initialDrivers.length);
+  
   const ITEMS_PER_PAGE = 10;
 
   // Mark component as mounted after hydration
   useEffect(() => {
     setMounted(true);
+    
+    // Store initial drivers JSON to compare for changes
+    initialDriversRef.current = JSON.stringify(initialDrivers);
   }, []);
 
-  // Update drivers when initialDrivers changes
+  // Update drivers ONLY when initialDrivers actually changes
   useEffect(() => {
-    if (!isLoading) {
-      setDrivers(initialDrivers);
-      setPage(1);
+    // Skip if loading or if initialDrivers is empty
+    if (!initialDrivers.length || isLoadingRef.current) {
+      return;
     }
-  }, [initialDrivers, isLoading]);
+    
+    // Check if initialDrivers actually changed by comparing JSON
+    const newDriversJSON = JSON.stringify(initialDrivers);
+    if (newDriversJSON !== initialDriversRef.current) {
+      console.log('Initial drivers changed, updating state');
+      setDrivers(initialDrivers);
+      totalLoadedRef.current = initialDrivers.length;
+      setPage(1);
+      // Update our reference
+      initialDriversRef.current = newDriversJSON;
+    }
+  }, [initialDrivers]);
+  
+  // Set up IntersectionObserver for endless scrolling
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    // Clean up any existing observer
+    if (observer.current) {
+      observer.current.disconnect();
+    }
+    
+    const handleObserver = (entries: IntersectionObserverEntry[]) => {
+      if (entries.length === 0) return;
+      
+      const target = entries[0];
+      if (target && target.isIntersecting && hasMore && !isLoadingRef.current) {
+        console.log('Loading element is visible - loading more drivers');
+        void loadMore();
+      }
+    };
+    
+    // Create new observer with a larger rootMargin to trigger earlier
+    observer.current = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '150px',
+      threshold: 0.1
+    });
+    
+    // Observe the loading div if it exists
+    if (loadingRef.current) {
+      observer.current.observe(loadingRef.current);
+    }
+    
+    // Clean up observer on unmount
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [hasMore]);
 
-  // Load more drivers when clicking the "Load More" button
-  const loadMore = async () => {
-    if (isLoading || !hasMore) return;
+  // Load more drivers function
+  const loadMore = useCallback(async () => {
+    if (isLoadingRef.current || !hasMore) {
+      console.log('Skipping loadMore: already loading or no more data');
+      return;
+    }
     
     try {
+      console.log('Starting to load more drivers');
+      isLoadingRef.current = true;
       setIsLoading(true);
       
       const nextPage = page + 1;
@@ -52,22 +120,33 @@ export default function EndlessDriverList({
       
       console.log(`Loading more drivers: page=${nextPage}, skip=${skipCount}, limit=${ITEMS_PER_PAGE}`);
       
-      const response = await fetchDrivers(
+      const newDrivers = await fetchDrivers(
         { skip: skipCount, limit: ITEMS_PER_PAGE },
         { sortBy: sortField, sortOrder: sortOrder }
       );
       
-      if (Array.isArray(response) && response.length > 0) {
+      // Get hasMore from sessionStorage (set by driverService)
+      const hasMoreStored = sessionStorage.getItem('driversHasMore');
+      if (hasMoreStored !== null) {
+        console.log(`Setting hasMore from sessionStorage: ${hasMoreStored}`);
+        setHasMore(hasMoreStored === 'true');
+      } else if (newDrivers.length < ITEMS_PER_PAGE) {
+        console.log('Setting hasMore to false based on returned data length');
+        setHasMore(false);
+      }
+      
+      if (Array.isArray(newDrivers) && newDrivers.length > 0) {
         // Check for duplicates
         const existingIds = new Set(drivers.map(d => d.id));
-        const newDrivers = response.filter(d => !existingIds.has(d.id));
+        const uniqueNewDrivers = newDrivers.filter(d => !existingIds.has(d.id));
         
-        if (newDrivers.length === 0) {
+        if (uniqueNewDrivers.length === 0) {
           console.log('No new drivers to add');
           setHasMore(false);
         } else {
-          console.log(`Adding ${newDrivers.length} new drivers`);
-          setDrivers(prev => [...prev, ...newDrivers]);
+          console.log(`Adding ${uniqueNewDrivers.length} new drivers`);
+          setDrivers(prev => [...prev, ...uniqueNewDrivers]);
+          totalLoadedRef.current += uniqueNewDrivers.length;
           setPage(nextPage);
         }
       } else {
@@ -76,14 +155,17 @@ export default function EndlessDriverList({
       }
     } catch (error) {
       console.error('Error loading more drivers:', error);
+      setHasMore(false); // Prevent further loading attempts on error
     } finally {
+      console.log('Finished loading drivers');
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
-  };
+  }, [fetchDrivers, page, sortField, sortOrder, drivers, hasMore]);
 
   // Handle sorting
   const handleSort = async (field: keyof Driver) => {
-    if (isLoading) return;
+    if (isLoading || isLoadingRef.current) return;
     
     // Determine new sort order
     let newOrder: 'asc' | 'desc';
@@ -97,21 +179,37 @@ export default function EndlessDriverList({
     }
     
     try {
+      isLoadingRef.current = true;
       setIsLoading(true);
       
       // Reset pagination
       setPage(1);
       setHasMore(true);
+      totalLoadedRef.current = 0;
       
       // Fetch sorted data
-      await fetchDrivers(
+      const sortedDrivers = await fetchDrivers(
         { skip: 0, limit: ITEMS_PER_PAGE },
         { sortBy: field, sortOrder: newOrder }
       );
+      
+      // Get hasMore from sessionStorage (set by driverService)
+      const hasMoreStored = sessionStorage.getItem('driversHasMore');
+      if (hasMoreStored !== null) {
+        setHasMore(hasMoreStored === 'true');
+      } else if (sortedDrivers.length < ITEMS_PER_PAGE) {
+        setHasMore(false);
+      }
+      
+      if (Array.isArray(sortedDrivers)) {
+        setDrivers(sortedDrivers);
+        totalLoadedRef.current = sortedDrivers.length;
+      }
     } catch (error) {
       console.error('Error sorting drivers:', error);
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
   };
 
@@ -215,17 +313,14 @@ export default function EndlessDriverList({
         </table>
       </div>
       
-      {/* Manual pagination controls */}
+      {/* Loading indicator and observer target */}
       <div className="flex justify-center items-center p-4 mt-4">
-        {isLoading || loading ? (
+        {(isLoading || loading || isLoadingRef.current) ? (
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         ) : hasMore ? (
-          <button
-            onClick={loadMore}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Load More
-          </button>
+          <div ref={loadingRef} className="h-10">
+            <p className="text-gray-500">Scroll to load more</p>
+          </div>
         ) : (
           <p className="text-gray-500">No more drivers to load</p>
         )}

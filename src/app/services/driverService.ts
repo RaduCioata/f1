@@ -11,11 +11,21 @@ const CACHE_HEADERS = {
   'Expires': '0'
 };
 
+// Debounce mechanism to prevent multiple identical calls at once
+const pendingRequests = new Map<string, Promise<any>>();
+
 // Helper function to add cache-busting parameter
 const addCacheBuster = (params: URLSearchParams) => {
   params.append('_t', Date.now().toString());
   return params;
 };
+
+// Response structure for paginated drivers
+export interface DriversResponse {
+  drivers: Driver[];
+  total: number;
+  hasMore: boolean;
+}
 
 // Fetch drivers with optional filtering and sorting
 export async function fetchDrivers(
@@ -50,24 +60,72 @@ export async function fetchDrivers(
       if (sort.sortOrder) queryParams.append('sortOrder', sort.sortOrder);
     }
     
-    // Build the URL with query parameters
-    const url = `/api/drivers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    // Build the URL with query parameters (excluding cache buster to create request key)
+    const baseUrl = `${API_BASE_URL}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
-    // Make the request
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    // Create a request key for deduplication
+    const requestKey = baseUrl;
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch drivers: ${response.status} ${response.statusText}`);
+    // Check if this exact request is already in progress
+    if (pendingRequests.has(requestKey)) {
+      console.log('Reusing existing request for:', requestKey);
+      return await pendingRequests.get(requestKey)!;
     }
     
-    const data = await response.json();
-    return data;
+    // Add cache buster to actual URL
+    addCacheBuster(queryParams);
+    const url = `${API_BASE_URL}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    console.log('Fetching drivers from URL:', url);
+    
+    // Create the request promise
+    const requestPromise = (async () => {
+      try {
+        // Make the request
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...CACHE_HEADERS
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch drivers: ${response.status} ${response.statusText}`);
+        }
+        
+        const data: DriversResponse = await response.json();
+        
+        console.log('Received data:', {
+          drivers: data.drivers?.length || 0,
+          total: data.total,
+          hasMore: data.hasMore
+        });
+        
+        // Store hasMore in sessionStorage for the EndlessDriverList component to use
+        if (data.hasMore !== undefined) {
+          sessionStorage.setItem('driversHasMore', data.hasMore.toString());
+        }
+        
+        // Store total in sessionStorage for pagination purposes
+        if (data.total !== undefined) {
+          sessionStorage.setItem('driversTotalCount', data.total.toString());
+        }
+        
+        // Return just the drivers array to maintain backward compatibility
+        return data.drivers || [];
+      } finally {
+        // Clean up the pending request regardless of success/failure
+        setTimeout(() => {
+          pendingRequests.delete(requestKey);
+        }, 100);
+      }
+    })();
+    
+    // Store the promise for potential reuse
+    pendingRequests.set(requestKey, requestPromise);
+    
+    return await requestPromise;
   } catch (error) {
     console.error('Error fetching drivers:', error);
     throw error;
