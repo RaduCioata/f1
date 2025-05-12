@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Index } from "typeorm";
 import { Driver } from "./Driver";
 
 @Entity()
@@ -10,6 +10,7 @@ export class Team {
     name!: string;
 
     @Column()
+    @Index()
     teamConstructor!: string;
 
     @Column()

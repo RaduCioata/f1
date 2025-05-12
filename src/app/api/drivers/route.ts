@@ -1,149 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initialDrivers, Driver } from './_lib/driverData';
 
-// In-memory storage for the drivers - adding IDs to the initial drivers
-let drivers: Driver[] = initialDrivers.map((driver, index) => ({
-  ...driver,
-  id: String(index + 1)
-}));
-
-interface GetDriversParams {
-  team?: string;
-  name?: string;
-  minWins?: number;
-  skip?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // Extract query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const params: GetDriversParams = {
-      team: searchParams.get('team') || undefined,
-      name: searchParams.get('name') || undefined,
-      minWins: searchParams.get('minWins') ? parseInt(searchParams.get('minWins')!) : undefined,
-      skip: searchParams.get('skip') ? parseInt(searchParams.get('skip')!) : 0,
-      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10,
-      sortBy: searchParams.get('sortBy') || 'name',
-      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc'
-    };
-
-    // Apply filters
-    let filteredDrivers = [...drivers];
-    
-    if (params.team) {
-      filteredDrivers = filteredDrivers.filter(driver => 
-        driver.team.toLowerCase().includes(params.team!.toLowerCase())
-      );
-    }
-    
-    if (params.name) {
-      filteredDrivers = filteredDrivers.filter(driver => 
-        driver.name.toLowerCase().includes(params.name!.toLowerCase())
-      );
-    }
-    
-    if (params.minWins !== undefined) {
-      filteredDrivers = filteredDrivers.filter(driver => 
-        driver.wins >= params.minWins!
-      );
-    }
-
-    // Apply sorting
-    if (params.sortBy) {
-      filteredDrivers.sort((a, b) => {
-        const fieldA = a[params.sortBy as keyof typeof a];
-        const fieldB = b[params.sortBy as keyof typeof b];
-        
-        if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-          return params.sortOrder === 'asc' 
-            ? fieldA.localeCompare(fieldB)
-            : fieldB.localeCompare(fieldA);
-        } else {
-          // Assuming numbers for non-string fields
-          return params.sortOrder === 'asc'
-            ? (fieldA as number) - (fieldB as number)
-            : (fieldB as number) - (fieldA as number);
-        }
-      });
-    }
-
-    // Get total before pagination
-    const total = filteredDrivers.length;
-
-    // Apply pagination
-    const paginatedDrivers = filteredDrivers.slice(
-      params.skip,
-      params.skip! + params.limit!
-    );
-
-    // Determine if there are more results
-    const hasMore = params.skip! + params.limit! < total;
-
-    // Add artificial delay to simulate network latency (for demo purposes)
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return NextResponse.json({
-      drivers: paginatedDrivers,
-      total,
-      hasMore
-    });
-  } catch (error) {
-    console.error('Error in GET /api/drivers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch drivers' },
-      { status: 500 }
-    );
-  }
-}
-
-interface NewDriverRequest {
-  name: string;
-  team: string;
-  firstSeason?: number;
-  races?: number;
-  wins?: number;
+export async function GET() {
+  const res = await fetch('http://localhost:4000/drivers');
+  const drivers = await res.json();
+  return NextResponse.json(drivers);
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const newDriverData = await request.json() as NewDriverRequest;
-    
-    // Validate required fields
-    if (!newDriverData.name || !newDriverData.team) {
-      return NextResponse.json(
-        { error: 'Name and team are required' },
-        { status: 400 }
-      );
-    }
-    
-    // Get the next ID (highest ID + 1)
-    const nextId = String(Math.max(...drivers.map(d => parseInt(d.id))) + 1);
-    
-    // Create a new driver with all required fields
-    const newDriver: Driver = {
-      id: nextId,
-      name: newDriverData.name,
-      team: newDriverData.team,
-      firstSeason: newDriverData.firstSeason ?? new Date().getFullYear(),
-      races: newDriverData.races ?? 0,
-      wins: newDriverData.wins ?? 0
-    };
-    
-    // Add to drivers array
-    drivers.unshift(newDriver);
-    
-    return NextResponse.json(newDriver, { status: 201 });
-  } catch (error) {
-    console.error('Error in POST /api/drivers:', error);
-    return NextResponse.json(
-      { error: 'Failed to add driver' },
-      { status: 500 }
-    );
-  }
+  const body = await request.json();
+  const res = await fetch('http://localhost:4000/drivers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
 }
 
 interface UpdateDriverRequest {

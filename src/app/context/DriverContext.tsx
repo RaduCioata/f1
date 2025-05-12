@@ -7,12 +7,19 @@ import * as offlineStorage from "../services/offlineStorage";
 import * as syncService from "../services/syncService";
 
 export interface Driver {
-  id: string;
-  name: string;
-  team: string;
-  firstSeason: number;
-  races: number;
-  wins: number;
+  id: number;
+  firstName: string;
+  lastName: string;
+  nationality: string;
+  dateOfBirth: string;
+  driverNumber: number;
+  team: {
+    id: number;
+    name: string;
+    teamConstructor: string;
+    baseLocation: string;
+    foundedYear: number;
+  };
 }
 
 interface DriverContextType {
@@ -192,12 +199,12 @@ export function DriverProvider({ children }: { children: ReactNode }) {
         // Online mode - update through API
         driver = await driverService.updateDriver(id, updatedDriver);
         // Update local storage
-        const updatedDrivers = drivers.map((d) => (d.id === id ? driver! : d));
+        const updatedDrivers = drivers.map((d) => (d.id === Number(id) ? driver! : d));
         offlineStorage.saveLocalDrivers(updatedDrivers);
       }
 
       setDrivers((prevDrivers) =>
-        prevDrivers.map((d) => (d.id === id ? driver! : d))
+        prevDrivers.map((d) => (d.id === Number(id) ? driver! : d))
       );
       updatePendingChangesStatus();
     } catch (err) {
@@ -224,11 +231,11 @@ export function DriverProvider({ children }: { children: ReactNode }) {
         // Online mode - delete through API
         await driverService.deleteDriver(id);
         // Update local storage
-        const updatedDrivers = drivers.filter((driver) => driver.id !== id);
+        const updatedDrivers = drivers.filter((driver) => driver.id !== Number(id));
         offlineStorage.saveLocalDrivers(updatedDrivers);
       }
 
-      setDrivers((prevDrivers) => prevDrivers.filter((driver) => driver.id !== id));
+      setDrivers((prevDrivers) => prevDrivers.filter((driver) => driver.id !== Number(id)));
       updatePendingChangesStatus();
     } catch (err) {
       console.error("Error deleting driver:", err);
@@ -240,7 +247,7 @@ export function DriverProvider({ children }: { children: ReactNode }) {
   };
 
   const getDriver = (id: string) => {
-    return drivers.find((driver) => driver.id === id);
+    return drivers.find((driver) => driver.id === Number(id));
   };
 
   const syncChanges = async () => {

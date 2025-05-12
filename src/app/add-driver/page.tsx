@@ -2,244 +2,144 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useDrivers } from "../context/DriverContext";
+import { useState, useEffect } from "react";
+
+type Team = {
+  id: number;
+  name: string;
+};
 
 export default function AddDriver() {
   const router = useRouter();
-  const { addDriver } = useDrivers();
+  const [teams, setTeams] = useState<Team[]>([]);
   const [formData, setFormData] = useState({
-    name: "",
-    team: "",
-    firstSeason: "",
-    races: "",
-    wins: ""
+    firstName: "",
+    lastName: "",
+    nationality: "",
+    dateOfBirth: "",
+    driverNumber: "",
+    teamId: ""
   });
-  
-  // Add validation errors state
-  const [errors, setErrors] = useState({
-    name: "",
-    team: "",
-    firstSeason: "",
-    races: "",
-    wins: ""
-  });
+  const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fetch teams for the dropdown
+  useEffect(() => {
+    fetch("/api/teams")
+      .then(res => res.json())
+      .then(data => setTeams(data));
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[id as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [id]: "" }));
-    }
   };
 
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = { ...errors };
-    
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = "Driver name is required";
-      isValid = false;
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-      isValid = false;
-    } else if (!/^[A-Za-z\s\-']+$/.test(formData.name.trim())) {
-      newErrors.name = "Name can only contain letters, spaces, hyphens, and apostrophes";
-      isValid = false;
-    }
-    
-    // Team validation
-    if (!formData.team.trim()) {
-      newErrors.team = "Team name is required";
-      isValid = false;
-    } else if (!/^[A-Za-z\s\-']+$/.test(formData.team.trim())) {
-      newErrors.team = "Team can only contain letters, spaces, hyphens, and apostrophes";
-      isValid = false;
-    }
-    
-    // First season validation
-    const firstSeasonValue = parseInt(formData.firstSeason);
-    const currentYear = new Date().getFullYear();
-    if (!formData.firstSeason) {
-      newErrors.firstSeason = "First season is required";
-      isValid = false;
-    } else if (isNaN(firstSeasonValue)) {
-      newErrors.firstSeason = "First season must be a number";
-      isValid = false;
-    } else if (firstSeasonValue < 1950) {
-      newErrors.firstSeason = "First season cannot be before 1950";
-      isValid = false;
-    } else if (firstSeasonValue > currentYear) {
-      newErrors.firstSeason = `First season cannot be after ${currentYear}`;
-      isValid = false;
-    }
-    
-    // Races validation
-    const racesValue = parseInt(formData.races);
-    if (!formData.races) {
-      newErrors.races = "Number of races is required";
-      isValid = false;
-    } else if (isNaN(racesValue)) {
-      newErrors.races = "Number of races must be a number";
-      isValid = false;
-    } else if (racesValue < 0) {
-      newErrors.races = "Number of races cannot be negative";
-      isValid = false;
-    }
-    
-    // Wins validation
-    const winsValue = parseInt(formData.wins);
-    if (!formData.wins) {
-      newErrors.wins = "Number of wins is required";
-      isValid = false;
-    } else if (isNaN(winsValue)) {
-      newErrors.wins = "Number of wins must be a number";
-      isValid = false;
-    } else if (winsValue < 0) {
-      newErrors.wins = "Number of wins cannot be negative";
-      isValid = false;
-    } else if (winsValue > racesValue) {
-      newErrors.wins = "Number of wins cannot exceed number of races";
-      isValid = false;
-    }
-    
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form before submitting
-    if (!validateForm()) {
-      return;
-    }
-    
-    // Convert string values to numbers where needed
-    addDriver({
-      name: formData.name.trim(),
-      team: formData.team.trim(),
-      firstSeason: parseInt(formData.firstSeason),
-      races: parseInt(formData.races),
-      wins: parseInt(formData.wins)
+    setError("");
+    const res = await fetch("/api/drivers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...formData,
+        driverNumber: Number(formData.driverNumber),
+        teamId: Number(formData.teamId)
+      }),
     });
-    
-    // Navigate back to the driver list
-    router.push("/driver-list");
+    if (res.ok) {
+      router.push("/driver-list");
+    } else {
+      setError("Failed to add driver.");
+    }
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md" noValidate>
         <div className="mb-6">
-          <label htmlFor="name" className="block text-white mb-2">
-            Name
-          </label>
+          <label htmlFor="firstName" className="block text-white mb-2">First Name</label>
           <input
             type="text"
-            id="name"
-            className={`w-full p-2 rounded ${errors.name ? 'border-2 border-red-300' : ''}`}
-            placeholder="Enter driver name"
-            value={formData.name}
+            id="firstName"
+            className="w-full p-2 rounded"
+            placeholder="Enter first name"
+            value={formData.firstName}
             onChange={handleChange}
-            pattern="[A-Za-z\s\-']+"
-            title="Name can only contain letters, spaces, hyphens, and apostrophes"
             required
           />
-          {errors.name && <p className="text-yellow-200 text-sm mt-1">{errors.name}</p>}
         </div>
-
         <div className="mb-6">
-          <label htmlFor="team" className="block text-white mb-2">
-            Team
-          </label>
+          <label htmlFor="lastName" className="block text-white mb-2">Last Name</label>
           <input
             type="text"
-            id="team"
-            className={`w-full p-2 rounded ${errors.team ? 'border-2 border-red-300' : ''}`}
-            placeholder="Enter team name"
-            value={formData.team}
+            id="lastName"
+            className="w-full p-2 rounded"
+            placeholder="Enter last name"
+            value={formData.lastName}
             onChange={handleChange}
-            pattern="[A-Za-z\s\-']+"
-            title="Team can only contain letters, spaces, hyphens, and apostrophes"
             required
           />
-          {errors.team && <p className="text-yellow-200 text-sm mt-1">{errors.team}</p>}
         </div>
-
         <div className="mb-6">
-          <label htmlFor="firstSeason" className="block text-white mb-2">
-            First season
-          </label>
+          <label htmlFor="nationality" className="block text-white mb-2">Nationality</label>
           <input
-            type="number"
-            id="firstSeason"
-            className={`w-full p-2 rounded ${errors.firstSeason ? 'border-2 border-red-300' : ''}`}
-            placeholder="Enter first season year"
-            value={formData.firstSeason}
+            type="text"
+            id="nationality"
+            className="w-full p-2 rounded"
+            placeholder="Enter nationality"
+            value={formData.nationality}
             onChange={handleChange}
-            min="1950"
-            max={new Date().getFullYear().toString()}
             required
           />
-          {errors.firstSeason && <p className="text-yellow-200 text-sm mt-1">{errors.firstSeason}</p>}
         </div>
-
         <div className="mb-6">
-          <label htmlFor="races" className="block text-white mb-2">
-            Number of races
-          </label>
+          <label htmlFor="dateOfBirth" className="block text-white mb-2">Date of Birth</label>
           <input
-            type="number"
-            id="races"
-            className={`w-full p-2 rounded ${errors.races ? 'border-2 border-red-300' : ''}`}
-            placeholder="Enter number of races"
-            value={formData.races}
+            type="date"
+            id="dateOfBirth"
+            className="w-full p-2 rounded"
+            value={formData.dateOfBirth}
             onChange={handleChange}
-            min="0"
             required
           />
-          {errors.races && <p className="text-yellow-200 text-sm mt-1">{errors.races}</p>}
         </div>
-
-        <div className="mb-8">
-          <label htmlFor="wins" className="block text-white mb-2">
-            Number of wins
-          </label>
+        <div className="mb-6">
+          <label htmlFor="driverNumber" className="block text-white mb-2">Driver Number</label>
           <input
             type="number"
-            id="wins"
-            className={`w-full p-2 rounded ${errors.wins ? 'border-2 border-red-300' : ''}`}
-            placeholder="Enter number of wins"
-            value={formData.wins}
+            id="driverNumber"
+            className="w-full p-2 rounded"
+            placeholder="Enter driver number"
+            value={formData.driverNumber}
             onChange={handleChange}
-            min="0"
             required
           />
-          {errors.wins && <p className="text-yellow-200 text-sm mt-1">{errors.wins}</p>}
         </div>
-
-        <div className="flex justify-center mb-8">
-          <button 
-            type="submit"
-            className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors"
+        <div className="mb-6">
+          <label htmlFor="teamId" className="block text-white mb-2">Team</label>
+          <select
+            id="teamId"
+            className="w-full p-2 rounded"
+            value={formData.teamId}
+            onChange={handleChange}
+            required
           >
-            Add Driver
-          </button>
+            <option value="">Select a team</option>
+            {teams.map(team => (
+              <option key={team.id} value={team.id}>{team.name}</option>
+            ))}
+          </select>
         </div>
-
-        <div className="absolute bottom-8 left-8">
-          <Link href="/">
-            <button className="text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-          </Link>
-        </div>
+        {error && <p className="text-yellow-200 text-sm mt-1">{error}</p>}
+        <button
+          type="submit"
+          className="w-full bg-white text-red-600 font-bold py-2 px-4 rounded hover:bg-gray-100"
+        >
+          Add Driver
+        </button>
+        <Link href="/driver-list" className="block text-center text-white mt-4 underline">
+          Back to Driver List
+        </Link>
       </form>
     </main>
   );

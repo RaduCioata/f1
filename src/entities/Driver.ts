@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from "typeorm";
 import { Team } from "./Team";
 
 @Entity()
@@ -23,5 +23,6 @@ export class Driver {
 
     @ManyToOne(() => Team, team => team.drivers)
     @JoinColumn()
+    @Index()
     team!: Team;
 } 

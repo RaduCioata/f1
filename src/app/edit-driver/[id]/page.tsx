@@ -3,275 +3,173 @@
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useDrivers } from "../../context/DriverContext";
 
 export default function EditDriver() {
   const router = useRouter();
   const params = useParams();
   const driverId = params.id as string;
-  
-  const { getDriver, updateDriver, deleteDriver } = useDrivers();
+
   const [formData, setFormData] = useState({
-    name: "",
-    team: "",
-    firstSeason: "",
-    races: "",
-    wins: ""
+    firstName: "",
+    lastName: "",
+    nationality: "",
+    dateOfBirth: "",
+    driverNumber: "",
+    teamId: ""
   });
-  
-  // Add validation errors state
-  const [errors, setErrors] = useState({
-    name: "",
-    team: "",
-    firstSeason: "",
-    races: "",
-    wins: ""
-  });
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const driver = getDriver(driverId);
-    if (driver) {
-      setFormData({
-        name: driver.name,
-        team: driver.team,
-        firstSeason: driver.firstSeason.toString(),
-        races: driver.races.toString(),
-        wins: driver.wins.toString()
-      });
-    } else {
-      // If driver not found, redirect to driver list
-      router.push("/driver-list");
+    async function fetchData() {
+      setLoading(true);
+      setError("");
+      try {
+        const [driverRes, teamsRes] = await Promise.all([
+          fetch(`http://localhost:4000/drivers/${driverId}`),
+          fetch("http://localhost:4000/teams")
+        ]);
+        if (!driverRes.ok) throw new Error("Failed to fetch driver");
+        if (!teamsRes.ok) throw new Error("Failed to fetch teams");
+        const driver = await driverRes.json();
+        const teamsData = await teamsRes.json();
+        setFormData({
+          firstName: driver.firstName || "",
+          lastName: driver.lastName || "",
+          nationality: driver.nationality || "",
+          dateOfBirth: driver.dateOfBirth ? driver.dateOfBirth.slice(0, 10) : "",
+          driverNumber: driver.driverNumber?.toString() || "",
+          teamId: driver.team?.id?.toString() || ""
+        });
+        setTeams(teamsData);
+      } catch (err) {
+        setError("Failed to load driver or teams");
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [driverId, getDriver, router]);
+    fetchData();
+  }, [driverId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[id as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [id]: "" }));
-    }
   };
 
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = { ...errors };
-    
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-      isValid = false;
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-      isValid = false;
-    } else if (!/^[A-Za-z\s\-']+$/.test(formData.name.trim())) {
-      newErrors.name = "Name can only contain letters, spaces, hyphens, and apostrophes";
-      isValid = false;
-    }
-    
-    // Team validation
-    if (!formData.team.trim()) {
-      newErrors.team = "Team is required";
-      isValid = false;
-    } else if (!/^[A-Za-z\s\-']+$/.test(formData.team.trim())) {
-      newErrors.team = "Team can only contain letters, spaces, hyphens, and apostrophes";
-      isValid = false;
-    }
-    
-    // First season validation
-    const firstSeasonValue = parseInt(formData.firstSeason);
-    const currentYear = new Date().getFullYear();
-    if (!formData.firstSeason) {
-      newErrors.firstSeason = "First season is required";
-      isValid = false;
-    } else if (isNaN(firstSeasonValue)) {
-      newErrors.firstSeason = "First season must be a number";
-      isValid = false;
-    } else if (firstSeasonValue < 1950) {
-      newErrors.firstSeason = "First season cannot be before 1950";
-      isValid = false;
-    } else if (firstSeasonValue > currentYear) {
-      newErrors.firstSeason = "First season cannot be in the future";
-      isValid = false;
-    }
-    
-    // Races validation
-    const racesValue = parseInt(formData.races);
-    if (!formData.races) {
-      newErrors.races = "Races is required";
-      isValid = false;
-    } else if (isNaN(racesValue)) {
-      newErrors.races = "Number of races must be a number";
-      isValid = false;
-    } else if (racesValue < 0) {
-      newErrors.races = "Number of races cannot be negative";
-      isValid = false;
-    }
-    
-    // Wins validation
-    const winsValue = parseInt(formData.wins);
-    if (!formData.wins) {
-      newErrors.wins = "Wins is required";
-      isValid = false;
-    } else if (isNaN(winsValue)) {
-      newErrors.wins = "Number of wins must be a number";
-      isValid = false;
-    } else if (winsValue < 0) {
-      newErrors.wins = "Number of wins cannot be negative";
-      isValid = false;
-    } else if (winsValue > racesValue) {
-      newErrors.wins = "Wins cannot exceed races";
-      isValid = false;
-    }
-    
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form before submitting
-    if (!validateForm()) {
-      return;
-    }
-    
-    updateDriver(driverId, {
-      name: formData.name.trim(),
-      team: formData.team.trim(),
-      firstSeason: parseInt(formData.firstSeason),
-      races: parseInt(formData.races),
-      wins: parseInt(formData.wins)
-    });
-    
-    router.push("/driver-list");
-  };
-
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this driver?")) {
-      deleteDriver(driverId);
+    setError("");
+    try {
+      const res = await fetch(`http://localhost:4000/drivers/${driverId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          driverNumber: Number(formData.driverNumber),
+          teamId: Number(formData.teamId)
+        })
+      });
+      if (!res.ok) throw new Error("Failed to update driver");
       router.push("/driver-list");
+    } catch (err) {
+      setError("Failed to update driver");
     }
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-red-600 p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md" noValidate>
-        <div className="mb-6">
-          <label htmlFor="name" className="block text-white mb-2">
-            Name
-          </label>
-          <input
-            type="text"
-            id="name"
-            className={`w-full p-2 rounded ${errors.name ? 'border-2 border-red-300' : ''}`}
-            value={formData.name}
-            onChange={handleChange}
-            pattern="[A-Za-z\s\-']+"
-            title="Name can only contain letters, spaces, hyphens, and apostrophes"
-            required
-          />
-          {errors.name && <p className="text-yellow-200 text-sm mt-1">{errors.name}</p>}
-        </div>
-
-        <div className="mb-6">
-          <label htmlFor="team" className="block text-white mb-2">
-            Team
-          </label>
-          <input
-            type="text"
-            id="team"
-            className={`w-full p-2 rounded ${errors.team ? 'border-2 border-red-300' : ''}`}
-            value={formData.team}
-            onChange={handleChange}
-            pattern="[A-Za-z\s\-']+"
-            title="Team can only contain letters, spaces, hyphens, and apostrophes"
-            required
-          />
-          {errors.team && <p className="text-yellow-200 text-sm mt-1">{errors.team}</p>}
-        </div>
-
-        <div className="mb-6">
-          <label htmlFor="firstSeason" className="block text-white mb-2">
-            First season
-          </label>
-          <input
-            type="number"
-            id="firstSeason"
-            className={`w-full p-2 rounded ${errors.firstSeason ? 'border-2 border-red-300' : ''}`}
-            value={formData.firstSeason}
-            onChange={handleChange}
-            min="1950"
-            max={new Date().getFullYear().toString()}
-            required
-          />
-          {errors.firstSeason && <p className="text-yellow-200 text-sm mt-1">{errors.firstSeason}</p>}
-        </div>
-
-        <div className="mb-6">
-          <label htmlFor="races" className="block text-white mb-2">
-            Number of races
-          </label>
-          <input
-            type="number"
-            id="races"
-            className={`w-full p-2 rounded ${errors.races ? 'border-2 border-red-300' : ''}`}
-            value={formData.races}
-            onChange={handleChange}
-            min="0"
-            required
-          />
-          {errors.races && <p className="text-yellow-200 text-sm mt-1">{errors.races}</p>}
-        </div>
-
-        <div className="mb-8">
-          <label htmlFor="wins" className="block text-white mb-2">
-            Number of wins
-          </label>
-          <input
-            type="number"
-            id="wins"
-            className={`w-full p-2 rounded ${errors.wins ? 'border-2 border-red-300' : ''}`}
-            value={formData.wins}
-            onChange={handleChange}
-            min="0"
-            required
-          />
-          {errors.wins && <p className="text-yellow-200 text-sm mt-1">{errors.wins}</p>}
-        </div>
-
-        <div className="flex justify-center mb-8">
-          <button 
-            type="submit"
-            className="bg-white text-black font-medium py-2 px-6 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            Update Driver
-          </button>
-        </div>
-
-        <div className="absolute bottom-8 left-8">
-          <Link href="/driver-list">
-            <button className="text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+        <h1 className="text-2xl font-bold mb-6 text-white">Edit Driver</h1>
+        {loading ? (
+          <div className="text-white">Loading...</div>
+        ) : error ? (
+          <div className="bg-red-100 border-l-4 border-red-500 p-4 my-4">
+            <p className="text-red-700">{error}</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <label htmlFor="firstName" className="block text-white mb-2">First Name</label>
+              <input
+                type="text"
+                id="firstName"
+                className="w-full p-2 rounded"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="lastName" className="block text-white mb-2">Last Name</label>
+              <input
+                type="text"
+                id="lastName"
+                className="w-full p-2 rounded"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="nationality" className="block text-white mb-2">Nationality</label>
+              <input
+                type="text"
+                id="nationality"
+                className="w-full p-2 rounded"
+                value={formData.nationality}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="dateOfBirth" className="block text-white mb-2">Date of Birth</label>
+              <input
+                type="date"
+                id="dateOfBirth"
+                className="w-full p-2 rounded"
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="driverNumber" className="block text-white mb-2">Driver Number</label>
+              <input
+                type="number"
+                id="driverNumber"
+                className="w-full p-2 rounded"
+                value={formData.driverNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="teamId" className="block text-white mb-2">Team</label>
+              <select
+                id="teamId"
+                className="w-full p-2 rounded"
+                value={formData.teamId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select a team</option>
+                {teams.map((team: any) => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-white text-red-600 font-bold py-2 px-4 rounded hover:bg-gray-100 mb-4"
+            >
+              Update Driver
             </button>
-          </Link>
-        </div>
-
-        <div className="absolute bottom-8 right-8">
-          <button 
-            type="button" 
-            onClick={handleDelete}
-            className="text-white"
-            aria-label="Delete Driver"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
+            <Link href="/driver-list" className="block text-center text-white mt-4 underline">
+              Back to Driver List
+            </Link>
+          </>
+        )}
       </form>
     </main>
   );
