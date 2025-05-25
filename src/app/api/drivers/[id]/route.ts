@@ -4,9 +4,9 @@ import { Driver, drivers } from '../_lib/drivers';
 // GET handler for a specific driver
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { [key: string]: string | string[] } }
 ) {
-  const id = params.id;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
   // Find the driver with the matching ID
   const driver = drivers.find((d: Driver) => d.id === id);
