@@ -29,7 +29,8 @@
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:coverage:backend": "cross-env NODE_OPTIONS=--experimental-vm-modules jest src/app/api --coverage",
-    "dev:express": "ts-node -P tsconfig.server.json src/scripts/expressServer.ts"
+    "dev:express": "ts-node -P tsconfig.server.json src/scripts/expressServer.ts",
+    "start:express": "ts-node src/scripts/expressServer.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^9.7.0",
