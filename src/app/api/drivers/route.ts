@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(_request: NextRequest) {
   const res = await fetch('http://localhost:4000/drivers');
   const drivers = await res.json();
   return NextResponse.json(drivers);
