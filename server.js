@@ -2,15 +2,21 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { Server } from 'socket.io';
+import cors from 'cors';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
-const port = parseInt(process.env.PORT || '3000', 10);
-const alternativePort = parseInt(process.env.PORT || '3000', 10) === 3000 ? 3001 : 3002; // Try different ports
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST'],
+  credentials: true,
+};
 
 // Initialize Next.js
-const app = next({ dev, hostname, port });
+const app = next({ dev, hostname });
 const handle = app.getRequestHandler();
+
+app.use(cors(corsOptions));
 
 // Attach socket server to Node.js global object
 // Need to use globalThis instead of process for TypeScript compatibility
@@ -137,40 +143,12 @@ app.prepare().then(() => {
   }, 5000);
   
   // Handle server startup with error recovery
-  const startServer = (portToUse) => {
-    try {
-      server.listen(portToUse, () => {
-        console.log(`> Ready on http://${hostname}:${portToUse}`);
-        console.log(`> Socket.IO server initialized at path: /api/socket-io`);
-        
-        // Store the actual port we're running on
-        globalThis.socketServer.port = portToUse;
-      });
-    } catch (err) {
-      console.error('Failed to start server:', err);
-      process.exit(1);
-    }
-  };
-  
-  // Store an already attempted port to avoid infinite loops
-  let attemptedAlternativePort = false;
-  
-  // Attempt to start on primary port
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      if (!attemptedAlternativePort) {
-        console.log(`Port ${port} is busy, trying alternative port ${alternativePort}`);
-        attemptedAlternativePort = true;
-        startServer(alternativePort);
-      } else {
-        console.error('All configured ports are busy. Please free a port or specify a different one with the PORT environment variable.');
-        process.exit(1);
-      }
-    } else {
-      console.error('Server error:', err);
-      process.exit(1);
-    }
+  const PORT = process.env.PORT || 3002;
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`> Socket.IO server initialized at path: /api/socket-io`);
+    
+    // Store the actual port we're running on
+    globalThis.socketServer.port = PORT;
   });
-  
-  startServer(port);
 }); 
