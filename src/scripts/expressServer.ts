@@ -6,10 +6,22 @@ import { Team } from "../entities/Team";
 import { Driver } from "../entities/Driver";
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// Configure CORS
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
 // Get all teams (for dropdown)
 app.get("/teams", async (req, res) => {
@@ -118,6 +130,19 @@ app.put("/drivers/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Express server running on http://localhost:${PORT}`);
-}); 
+// Initialize database before starting server
+const startServer = async () => {
+  try {
+    await AppDataSource.initialize();
+    console.log("Database connection initialized");
+
+    app.listen(PORT, () => {
+      console.log(`Express server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Error during initialization:", error);
+    process.exit(1);
+  }
+};
+
+startServer(); 
