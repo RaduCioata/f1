@@ -5,7 +5,7 @@
 import "./src/env.js";
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const config = {
   env: {
     API_URL: process.env.API_URL || 'http://localhost:4000',
   },
@@ -19,6 +19,14 @@ const nextConfig = {
       ],
     }
   },
-}
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb'
+    }
+  }
+};
 
-module.exports = nextConfig
+export default config;

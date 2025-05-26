@@ -1,20 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDataSource } from '../db';
+import { Driver } from '../../../entities/Driver';
 
-export async function GET(_request: NextRequest) {
-  const res = await fetch('http://localhost:4000/drivers');
-  const drivers = await res.json();
-  return NextResponse.json(drivers);
+export async function GET() {
+  try {
+    const dataSource = await getDataSource();
+    const drivers = await dataSource.getRepository(Driver).find({
+      relations: ["team"]
+    });
+    return NextResponse.json(drivers);
+  } catch (error) {
+    console.error('Error fetching drivers:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch drivers' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const res = await fetch('http://localhost:4000/drivers', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
+  try {
+    const body = await request.json();
+    const dataSource = await getDataSource();
+    const driverRepo = dataSource.getRepository(Driver);
+    
+    const newDriver = driverRepo.create(body);
+    await driverRepo.save(newDriver);
+    
+    return NextResponse.json(newDriver, { status: 201 });
+  } catch (error) {
+    console.error('Error creating driver:', error);
+    return NextResponse.json(
+      { error: 'Failed to create driver' },
+      { status: 500 }
+    );
+  }
 }
 
 interface UpdateDriverRequest {
@@ -39,9 +59,14 @@ export async function PATCH(request: NextRequest) {
     }
     
     // Find the driver
-    const index = drivers.findIndex(d => d.id === updateData.id);
+    const dataSource = await getDataSource();
+    const driverRepo = dataSource.getRepository(Driver);
+    const driver = await driverRepo.findOne({
+      where: { id: updateData.id },
+      relations: ["team"]
+    });
     
-    if (index === -1) {
+    if (!driver) {
       return NextResponse.json(
         { error: 'Driver not found' },
         { status: 404 }
@@ -50,26 +75,27 @@ export async function PATCH(request: NextRequest) {
     
     // Update individual fields if they are provided
     if (updateData.name !== undefined) {
-      drivers[index].name = updateData.name;
+      driver.name = updateData.name;
     }
     
     if (updateData.team !== undefined) {
-      drivers[index].team = updateData.team;
+      driver.team = updateData.team;
     }
     
     if (updateData.firstSeason !== undefined) {
-      drivers[index].firstSeason = updateData.firstSeason;
+      driver.firstSeason = updateData.firstSeason;
     }
     
     if (updateData.races !== undefined) {
-      drivers[index].races = updateData.races;
+      driver.races = updateData.races;
     }
     
     if (updateData.wins !== undefined) {
-      drivers[index].wins = updateData.wins;
+      driver.wins = updateData.wins;
     }
     
-    return NextResponse.json(drivers[index]);
+    await driverRepo.save(driver);
+    return NextResponse.json(driver);
   } catch (error) {
     console.error('Error in PATCH /api/drivers:', error);
     return NextResponse.json(
@@ -92,9 +118,14 @@ export async function DELETE(request: NextRequest) {
     }
     
     // Find the driver
-    const index = drivers.findIndex(d => d.id === id);
+    const dataSource = await getDataSource();
+    const driverRepo = dataSource.getRepository(Driver);
+    const driver = await driverRepo.findOne({
+      where: { id: id },
+      relations: ["team"]
+    });
     
-    if (index === -1) {
+    if (!driver) {
       return NextResponse.json(
         { error: 'Driver not found' },
         { status: 404 }
@@ -102,10 +133,9 @@ export async function DELETE(request: NextRequest) {
     }
     
     // Remove the driver
-    const deletedDriver = drivers[index];
-    drivers.splice(index, 1);
+    await driverRepo.remove(driver);
     
-    return NextResponse.json(deletedDriver);
+    return NextResponse.json(driver);
   } catch (error) {
     console.error('Error in DELETE /api/drivers:', error);
     return NextResponse.json(
