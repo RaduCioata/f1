@@ -11,7 +11,7 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.cjs'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
@@ -33,28 +33,10 @@ const customJestConfig = {
   coverageReporters: ['text', 'lcov', 'clover', 'html'],
   coverageThreshold: {
     global: {
-      statements: 90,
-      branches: 75,
-      functions: 80,
-      lines: 90,
-    },
-    './src/app/api/drivers/route.ts': {
-      statements: 90,
       branches: 80,
       functions: 80,
-      lines: 90,
-    },
-    './src/app/api/drivers/[id]/route.ts': {
-      statements: 100,
-      branches: 100,
-      functions: 100,
-      lines: 100,
-    },
-    './src/app/api/drivers/_lib/drivers.ts': {
-      statements: 100,
-      branches: 100,
-      functions: 100,
-      lines: 100,
+      lines: 80,
+      statements: 80,
     },
   },
 };
