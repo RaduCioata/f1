@@ -28,6 +28,16 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb'
     }
+  },
+  webpack: (config, { isServer }) => {
+    // Ignore optional TypeORM dependencies
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      'react-native-sqlite-storage': false,
+      '@sap/hana-client': false,
+      'mysql': false,
+    };
+    return config;
   }
 }
 
