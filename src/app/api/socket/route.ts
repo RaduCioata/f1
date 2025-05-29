@@ -2,17 +2,13 @@ import { Server as SocketIOServer } from 'socket.io';
 import { NextRequest, NextResponse } from 'next/server';
 import { Server as NetServer } from 'http';
 
-// Socket.IO server instance
-let io: SocketIOServer | null = null;
-
-// Store server instance since we need to reuse it
-let netServer: NetServer | null = null;
-
-// Port for the WebSocket server
+// Socket server configuration
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
-
-// URL to connect to the WebSocket server
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || `http://localhost:${SOCKET_PORT}`;
+
+// Server instances
+let io: SocketIOServer | null = null;
+let netServer: NetServer | null = null;
 
 // Function to generate random driver stats (for simulation)
 function generateRandomDriverStat(driverId: number) {
@@ -75,50 +71,47 @@ function startRealTimeUpdates() {
   }, 5000);
 }
 
-export function GET(req: NextRequest) {
-  // Check if Socket.IO server is initialized
-  if (globalThis.socketServer && globalThis.socketServer.io) {
-    const serverPort = globalThis.socketServer.port || 3000;
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Socket.IO server is available',
-      clientsCount: globalThis.socketServer.io.engine.clientsCount,
-      path: '/api/socket-io',
-      port: serverPort
-    });
-  }
-  
-  // For development - return success even if server isn't initialized yet
-  if (process.env.NODE_ENV === 'development') {
-    return NextResponse.json({
-      success: true,
-      message: 'Development mode: Socket.IO server should be available',
-      path: '/api/socket-io',
-      port: 3001 // Suggest trying the alternative port in development
-    });
-  }
-  
+// GET /api/socket - Get socket server status
+export async function GET() {
   return NextResponse.json({
-    success: false,
-    message: 'Socket.IO server is not initialized',
-    path: '/api/socket-io'
-  }, { status: 503 }); // Service Unavailable
+    status: 'available',
+    url: SOCKET_URL,
+    port: SOCKET_PORT
+  });
 }
 
-// Handle WebSocket upgrade requests
-export async function POST(req: NextRequest) {
-  // This endpoint is just for health checks now
-  if (globalThis.socketServer && globalThis.socketServer.io) {
-    return NextResponse.json({
-      success: true,
-      message: 'Socket.IO server is running',
-      clientsCount: globalThis.socketServer.io.engine.clientsCount
+// POST /api/socket - Initialize socket server
+export async function POST() {
+  try {
+    // Only initialize once
+    if (io) {
+      return NextResponse.json({ status: 'Socket server already running' });
+    }
+
+    // Get HTTP server instance
+    const httpServer = (process as any).socket?.server;
+    if (!httpServer) {
+      return NextResponse.json({ error: 'HTTP server not available' }, { status: 500 });
+    }
+
+    // Initialize Socket.IO server
+    io = new SocketIOServer(httpServer, {
+      path: '/api/socket',
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST']
+      }
     });
+
+    // Store net server reference
+    netServer = httpServer;
+
+    return NextResponse.json({ status: 'Socket server initialized', url: SOCKET_URL });
+  } catch (error) {
+    console.error('Socket initialization error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Socket initialization failed' },
+      { status: 500 }
+    );
   }
-  
-  return NextResponse.json({
-    success: false,
-    message: 'Socket.IO server is not initialized'
-  }, { status: 503 }); // Service Unavailable
 } 

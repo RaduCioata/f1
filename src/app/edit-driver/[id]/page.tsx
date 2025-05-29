@@ -26,23 +26,18 @@ export default function EditDriver() {
       setLoading(true);
       setError("");
       try {
-        const [driverRes, teamsRes] = await Promise.all([
-          fetch(`http://localhost:4000/drivers/${driverId}`),
-          fetch("http://localhost:4000/teams")
-        ]);
-        if (!driverRes.ok) throw new Error("Failed to fetch driver");
-        if (!teamsRes.ok) throw new Error("Failed to fetch teams");
-        const driver = await driverRes.json();
-        const teamsData = await teamsRes.json();
-        setFormData({
-          firstName: driver.firstName || "",
-          lastName: driver.lastName || "",
-          nationality: driver.nationality || "",
-          dateOfBirth: driver.dateOfBirth ? driver.dateOfBirth.slice(0, 10) : "",
-          driverNumber: driver.driverNumber?.toString() || "",
-          teamId: driver.team?.id?.toString() || ""
-        });
-        setTeams(teamsData);
+        const { driver, teams } = await getData(driverId);
+        if (driver) {
+          setFormData({
+            firstName: driver.firstName || "",
+            lastName: driver.lastName || "",
+            nationality: driver.nationality || "",
+            dateOfBirth: driver.dateOfBirth ? driver.dateOfBirth.slice(0, 10) : "",
+            driverNumber: driver.driverNumber?.toString() || "",
+            teamId: driver.team?.id?.toString() || ""
+          });
+          setTeams(teams);
+        }
       } catch (err) {
         setError("Failed to load driver or teams");
       } finally {
@@ -61,17 +56,10 @@ export default function EditDriver() {
     e.preventDefault();
     setError("");
     try {
-      const res = await fetch(`http://localhost:4000/drivers/${driverId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          driverNumber: Number(formData.driverNumber),
-          teamId: Number(formData.teamId)
-        })
-      });
-      if (!res.ok) throw new Error("Failed to update driver");
-      router.push("/driver-list");
+      const res = await updateDriver(driverId, formData);
+      if (res) {
+        router.push("/driver-list");
+      }
     } catch (err) {
       setError("Failed to update driver");
     }
@@ -173,4 +161,50 @@ export default function EditDriver() {
       </form>
     </main>
   );
-} 
+}
+
+const getData = async (driverId: string) => {
+  try {
+    const [driverRes, teamsRes] = await Promise.all([
+      fetch(`/api/drivers/${driverId}`, { cache: 'no-store' }),
+      fetch("/api/teams", { cache: 'no-store' })
+    ]);
+    
+    if (!driverRes.ok || !teamsRes.ok) {
+      throw new Error('Failed to fetch data');
+    }
+
+    const driver = await driverRes.json();
+    const teams = await teamsRes.json();
+    return { driver, teams };
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return { driver: null, teams: [] };
+  }
+};
+
+const updateDriver = async (driverId: string, data: any) => {
+  try {
+    const res = await fetch(`/api/drivers/${driverId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...data,
+        driverNumber: parseInt(data.driverNumber),
+        teamId: parseInt(data.teamId)
+      }),
+      cache: 'no-store'
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to update driver');
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error updating driver:', error);
+    return null;
+  }
+}; 

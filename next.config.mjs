@@ -7,38 +7,15 @@ import "./src/env.js";
 // @ts-check
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const config = {
+  reactStrictMode: true,
+  swcMinify: true,
   env: {
-    API_URL: process.env.API_URL || 'http://localhost:4000',
-  },
-  async rewrites() {
-    return {
-      fallback: [
-        {
-          source: '/api/:path*',
-          destination: `${process.env.API_URL || 'http://localhost:4000'}/:path*`,
-        },
-      ],
-    }
-  },
-  typescript: {
-    ignoreBuildErrors: false,
+    // Add any environment variables you need here
   },
   experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    }
-  },
-  webpack: (config, { isServer }) => {
-    // Ignore optional TypeORM dependencies
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      'react-native-sqlite-storage': false,
-      '@sap/hana-client': false,
-      'mysql': false,
-    };
-    return config;
+    serverActions: true,
   }
 }
 
-export default nextConfig;
+export default config;

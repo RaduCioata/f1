@@ -1,24 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { Driver, drivers } from '../_lib/drivers';
+import { NextResponse } from 'next/server';
+import prisma from '../../db';
 
-// GET handler for a specific driver
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const id = params.id;
-  
-  // Find the driver with the matching ID
-  const driver = drivers.find((d: Driver) => d.id === id);
-  
-  // If no driver is found, return a 404 response
-  if (!driver) {
-    return NextResponse.json(
-      { error: "Driver not found" }, 
-      { status: 404 }
-    );
-  }
-  
-  // Return the driver data
+// Force dynamic rendering and enable dynamic route parameters
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+
+// GET /api/drivers/[id]
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const driver = await prisma.driver.findUnique({
+    where: { id: parseInt(params.id) },
+    include: { team: true }
+  });
+  return NextResponse.json(driver || { error: 'Driver not found' });
+}
+
+// PATCH /api/drivers/[id] 
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const body = await request.json();
+  const driver = await prisma.driver.update({
+    where: { id: parseInt(params.id) },
+    data: {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      nationality: body.nationality,
+      dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
+      driverNumber: body.driverNumber ? parseInt(body.driverNumber) : undefined,
+      teamId: body.teamId ? parseInt(body.teamId) : undefined
+    },
+    include: { team: true }
+  });
   return NextResponse.json(driver);
 }

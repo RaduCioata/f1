@@ -1,146 +1,126 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDataSource } from '../db';
-import { Driver } from '../../../entities/Driver';
-
-export async function GET() {
-  try {
-    const dataSource = await getDataSource();
-    const drivers = await dataSource.getRepository(Driver).find({
-      relations: ["team"]
-    });
-    return NextResponse.json(drivers);
-  } catch (error) {
-    console.error('Error fetching drivers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch drivers' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const dataSource = await getDataSource();
-    const driverRepo = dataSource.getRepository(Driver);
-    
-    const newDriver = driverRepo.create(body);
-    await driverRepo.save(newDriver);
-    
-    return NextResponse.json(newDriver, { status: 201 });
-  } catch (error) {
-    console.error('Error creating driver:', error);
-    return NextResponse.json(
-      { error: 'Failed to create driver' },
-      { status: 500 }
-    );
-  }
-}
+import prisma from '../db';
 
 interface UpdateDriverRequest {
   id: string;
-  name?: string;
-  team?: string;
-  firstSeason?: number;
-  races?: number;
-  wins?: number;
+  firstName?: string;
+  lastName?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  driverNumber?: string;
+  teamId?: string;
+}
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// GET /api/drivers - Get all drivers
+export async function GET() {
+  const drivers = await prisma.driver.findMany({
+    include: { team: true }
+  });
+  return NextResponse.json(drivers);
+}
+
+// POST /api/drivers - Create a new driver
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const driver = await prisma.driver.create({
+    data: {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      nationality: body.nationality,
+      dateOfBirth: new Date(body.dateOfBirth),
+      driverNumber: parseInt(body.driverNumber),
+      teamId: parseInt(body.teamId)
+    },
+    include: { team: true }
+  });
+  return NextResponse.json(driver);
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const updateData = await request.json() as UpdateDriverRequest;
+    const body = await request.json() as UpdateDriverRequest;
     
-    // Validate required fields
-    if (!updateData.id) {
+    if (!body.id) {
       return NextResponse.json(
         { error: 'Driver ID is required' },
         { status: 400 }
       );
     }
-    
-    // Find the driver
-    const dataSource = await getDataSource();
-    const driverRepo = dataSource.getRepository(Driver);
-    const driver = await driverRepo.findOne({
-      where: { id: updateData.id },
-      relations: ["team"]
+
+    const driverId = parseInt(body.id);
+    if (isNaN(driverId)) {
+      return NextResponse.json(
+        { error: 'Invalid driver ID' },
+        { status: 400 }
+      );
+    }
+
+    const existingDriver = await prisma.driver.findUnique({
+      where: { id: driverId }
     });
-    
-    if (!driver) {
+
+    if (!existingDriver) {
       return NextResponse.json(
         { error: 'Driver not found' },
         { status: 404 }
       );
     }
-    
-    // Update individual fields if they are provided
-    if (updateData.name !== undefined) {
-      driver.name = updateData.name;
+
+    if (body.teamId) {
+      const teamId = parseInt(body.teamId);
+      if (isNaN(teamId)) {
+        return NextResponse.json(
+          { error: 'Invalid team ID' },
+          { status: 400 }
+        );
+      }
+
+      const team = await prisma.team.findUnique({
+        where: { id: teamId }
+      });
+      if (!team) {
+        return NextResponse.json(
+          { error: 'Team not found' },
+          { status: 400 }
+        );
+      }
     }
-    
-    if (updateData.team !== undefined) {
-      driver.team = updateData.team;
-    }
-    
-    if (updateData.firstSeason !== undefined) {
-      driver.firstSeason = updateData.firstSeason;
-    }
-    
-    if (updateData.races !== undefined) {
-      driver.races = updateData.races;
-    }
-    
-    if (updateData.wins !== undefined) {
-      driver.wins = updateData.wins;
-    }
-    
-    await driverRepo.save(driver);
-    return NextResponse.json(driver);
+
+    const updateData: any = {};
+    if (body.firstName) updateData.firstName = body.firstName;
+    if (body.lastName) updateData.lastName = body.lastName;
+    if (body.nationality) updateData.nationality = body.nationality;
+    if (body.dateOfBirth) updateData.dateOfBirth = new Date(body.dateOfBirth);
+    if (body.driverNumber) updateData.driverNumber = parseInt(body.driverNumber);
+    if (body.teamId) updateData.teamId = parseInt(body.teamId);
+
+    const updatedDriver = await prisma.driver.update({
+      where: { id: driverId },
+      data: updateData,
+      include: {
+        team: true
+      }
+    });
+
+    return NextResponse.json(updatedDriver);
   } catch (error) {
-    console.error('Error in PATCH /api/drivers:', error);
+    console.error('Error updating driver:', error);
     return NextResponse.json(
-      { error: 'Failed to update driver' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
 }
 
+// DELETE /api/drivers?id=X - Delete a driver
 export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Driver ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Find the driver
-    const dataSource = await getDataSource();
-    const driverRepo = dataSource.getRepository(Driver);
-    const driver = await driverRepo.findOne({
-      where: { id: id },
-      relations: ["team"]
-    });
-    
-    if (!driver) {
-      return NextResponse.json(
-        { error: 'Driver not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Remove the driver
-    await driverRepo.remove(driver);
-    
-    return NextResponse.json(driver);
-  } catch (error) {
-    console.error('Error in DELETE /api/drivers:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete driver' },
-      { status: 500 }
-    );
-  }
+  const { searchParams } = new URL(request.url);
+  const driver = await prisma.driver.delete({
+    where: { id: parseInt(searchParams.get('id') || '') },
+    include: { team: true }
+  });
+  return NextResponse.json(driver);
 } 

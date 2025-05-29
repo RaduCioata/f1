@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Simple health check endpoint to verify server availability
-export async function GET(req: NextRequest) {
-  return NextResponse.json({ status: 'ok' }, { status: 200 });
+// GET /api/health - Simple health check endpoint
+export async function GET() {
+  return NextResponse.json({ status: 'ok' });
 }
 
 // HEAD request support for lightweight health checks

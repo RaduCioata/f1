@@ -22,7 +22,7 @@ export default function DriverList() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("http://localhost:4000/drivers");
+        const res = await fetch("/api/drivers");
         if (!res.ok) throw new Error("Failed to fetch drivers");
         const data = await res.json();
         setDrivers(data);
@@ -44,10 +44,10 @@ export default function DriverList() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`http://localhost:4000/drivers/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/drivers?id=${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete driver');
-      // Refresh the list
-      const refreshed = await fetch("http://localhost:4000/drivers");
+      const refreshed = await fetch("/api/drivers");
+      if (!refreshed.ok) throw new Error('Failed to refresh drivers');
       setDrivers(await refreshed.json());
     } catch (err) {
       setError('Failed to delete driver');

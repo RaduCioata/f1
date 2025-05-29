@@ -1,9 +1,6 @@
-import "reflect-metadata";
 import express from "express";
 import cors from "cors";
-import { AppDataSource } from "../config/database";
-import { Team } from "../entities/Team";
-import { Driver } from "../entities/Driver";
+import prisma from "../lib/prisma";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,8 +23,7 @@ app.get("/health", (req, res) => {
 // Get all teams (for dropdown)
 app.get("/teams", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
-    const teams = await AppDataSource.getRepository(Team).find();
+    const teams = await prisma.team.findMany();
     res.json(teams);
   } catch (err) {
     console.error("Error in /teams endpoint:", err);
@@ -38,22 +34,24 @@ app.get("/teams", async (req, res) => {
 // Get all drivers (with team info)
 app.get("/drivers", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
-    const drivers = await AppDataSource.getRepository(Driver).find({ relations: ["team"] });
+    const drivers = await prisma.driver.findMany({
+      include: {
+        team: true
+      }
+    });
     res.json(drivers);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Add a GET endpoint for a single driver
+// Get a single driver
 app.get("/drivers/:id", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
     const id = Number(req.params.id);
-    const driver = await AppDataSource.getRepository(Driver).findOne({
+    const driver = await prisma.driver.findUnique({
       where: { id },
-      relations: ["team"]
+      include: { team: true }
     });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
     res.json(driver);
@@ -65,84 +63,87 @@ app.get("/drivers/:id", async (req, res) => {
 // Add a driver
 app.post("/drivers", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
     const { firstName, lastName, nationality, dateOfBirth, driverNumber, teamId } = req.body;
     if (!firstName || !lastName || !nationality || !dateOfBirth || !driverNumber || !teamId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    const team = await AppDataSource.getRepository(Team).findOneBy({ id: teamId });
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) return res.status(400).json({ error: "Team not found" });
 
-    const driver = new Driver();
-    driver.firstName = firstName;
-    driver.lastName = lastName;
-    driver.nationality = nationality;
-    driver.dateOfBirth = new Date(dateOfBirth);
-    driver.driverNumber = driverNumber;
-    driver.team = team;
+    const driver = await prisma.driver.create({
+      data: {
+        firstName,
+        lastName,
+        nationality,
+        dateOfBirth: new Date(dateOfBirth),
+        driverNumber,
+        teamId
+      },
+      include: {
+        team: true
+      }
+    });
 
-    await AppDataSource.getRepository(Driver).save(driver);
     res.status(201).json(driver);
   } catch (err) {
+    console.error("Error creating driver:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Add a DELETE endpoint for drivers
+// Delete a driver
 app.delete("/drivers/:id", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
     const id = Number(req.params.id);
-    const result = await AppDataSource.getRepository(Driver).delete(id);
-    if (result.affected === 0) {
-      return res.status(404).json({ error: "Driver not found" });
-    }
+    await prisma.driver.delete({
+      where: { id }
+    });
     res.status(204).send();
   } catch (err) {
+    if ((err as any).code === 'P2025') {
+      return res.status(404).json({ error: "Driver not found" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Add a PUT endpoint for updating a driver
+// Update a driver
 app.put("/drivers/:id", async (req, res) => {
   try {
-    if (!AppDataSource.isInitialized) await AppDataSource.initialize();
     const id = Number(req.params.id);
     const { firstName, lastName, nationality, dateOfBirth, driverNumber, teamId } = req.body;
     if (!firstName || !lastName || !nationality || !dateOfBirth || !driverNumber || !teamId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    const driverRepo = AppDataSource.getRepository(Driver);
-    const driver = await driverRepo.findOneBy({ id });
-    if (!driver) return res.status(404).json({ error: "Driver not found" });
-    const team = await AppDataSource.getRepository(Team).findOneBy({ id: teamId });
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) return res.status(400).json({ error: "Team not found" });
-    driver.firstName = firstName;
-    driver.lastName = lastName;
-    driver.nationality = nationality;
-    driver.dateOfBirth = new Date(dateOfBirth);
-    driver.driverNumber = driverNumber;
-    driver.team = team;
-    await driverRepo.save(driver);
+
+    const driver = await prisma.driver.update({
+      where: { id },
+      data: {
+        firstName,
+        lastName,
+        nationality,
+        dateOfBirth: new Date(dateOfBirth),
+        driverNumber,
+        teamId
+      },
+      include: {
+        team: true
+      }
+    });
+
     res.json(driver);
   } catch (err) {
+    if ((err as any).code === 'P2025') {
+      return res.status(404).json({ error: "Driver not found" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Initialize database before starting server
-const startServer = async () => {
-  try {
-    await AppDataSource.initialize();
-    console.log("Database connection initialized");
-
-    app.listen(PORT, () => {
-      console.log(`Express server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Error during initialization:", error);
-    process.exit(1);
-  }
-};
-
-startServer(); 
+app.listen(PORT, () => {
+  console.log(`Express server running on port ${PORT}`);
+}); 
